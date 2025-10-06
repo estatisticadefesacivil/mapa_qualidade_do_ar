@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório - Qualidade do Ar</title>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 15px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h1, h2 {
+            color: #00507a;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            gap: 0;
+            height: 1000px;
+        }
+
+        #map {
+            flex: 2;
+            height: 100%;
+            border: none;
+        }
+
+        #filtros {
+            width: 440px;
+            padding: 0 16px 16px 16px;
+            background: white;
+            border: none;
+            border-radius: 0;
+            height: 1000px;
+            box-shadow: none;
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        label, select, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        select {
+            padding: 8px;
+            border: 1px solid #d3e3ef;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #043b65;
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 90px;
+        }
+
+        button:hover {
+            background-color: #005a9e;
+        }
+
+
+        .titulo-filtros {
+            color: #454545;
+            font-weight: 740;
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top:180px;
+        }
+
+        .label-custom {
+            color: #489415;
+            font-weight: 630;
+            text-align: left;
+            margin-bottom: 6px;
+            display: block;
+            font-size: 13px;
+            width: 309px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .select-custom {
+            width: 309px;
+            height: 44px;
+            padding: 8px 12px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+            appearance: none;
+            background: url('data:image/svg+xml;charset=UTF-8,<svg fill="gray" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 12px center/16px 16px;
+            background-color: #fff;
+            background-origin: content-box;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-custom {
+            background-color: #08007B;
+            color: white;
+            height: 48px;
+            padding: 0 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 220px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            background-color: #393968;
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 100px;
+        }
+
+        .logo {
+            height: 100px;
+            width: 80px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .titulo-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 15px;
+            margin-top: 60px;
+            margin-left: 40px;
+        }
+
+        .logo-text-block {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            justify-content: center;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .logo-text {
+            font-size: 25px;
+            color: #08007B;
+            font-weight: bold;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .top-bar {
+            display: block;
+            width: calc(100% + 32px);
+            margin: 0 0 12px -16px;
+        }
+
+        .logo-header {
+            margin-left: 20px;
+        }
+
+    </style>
+
+    
+</head>
+
+<body>
+
+    <div class="container">
+        <div id="map"></div>
+
+        <form method="POST" action="/exportar" id="filtros">
+            <img src="https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/cima.png?raw=true" alt="Barra superior" class="top-bar">
+            <div class="titulo-container">
+                <img src="https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Boa_Titulo.png?raw=true" class="logo">
+                    <div class="logo-text-block">
+                        <span class="logo-text">Monitor de</span>
+                        <span class="logo-text">Qualidade</span>
+                        <span class="logo-text">do Ar</span>
+                    </div>
+            </div>
+
+            <h2 class="titulo-filtros">RELATÓRIO DE QUALIDADE DO AR</h2>
+
+        <label for="municipio" class="label-custom">Município</label>
+        <select id="municipio" name="municipio" class="select-custom">
+            <option value="">Selecione o município</option>
+            {% for m in municipios %}
+                <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="classificacao" class="label-custom">Classificação da Qualidade do Ar</label>
+        <select id="classificacao" name="valor" class="select-custom">
+            <option value="">Selecione a Qualidade</option>
+            <option value="Boa">Boa</option>
+            <option value="Moderada">Moderada</option>
+            <option value="Ruim">Ruim</option>
+            <option value="Muito Ruim">Muito Ruim</option>
+            <option value="Péssima">Péssima</option>
+        </select>
+
+        <button type="submit" class="btn-custom">Gerar documento</button>
+        
+        <div class="logo-container">
+            <img src="https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/logos.png?raw=true" alt="Governo do Amazonas" class="logo-container" />
+        </div>
+    </form>
+
+
+<script>
+    const initialCenter = [-6.117034, -65.025780];
+    const initialZoom = 6.35;
+    const mapa = L.map('map').setView(initialCenter, initialZoom);
+
+    // Mapa cinza claro
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> | © OpenStreetMap contributors',
+        subdomains: 'abcd',
+        maxZoom: 15
+    }).addTo(mapa);
+
+    let marcadores = [];
+    let poligonosLayer = null;
+
+    // Legenda fixa na parte inferior do mapa
+    const legendaUrl = 'https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/legenda_html.png?raw=true';
+    const legendaControl = L.control({ position: 'bottomleft' });
+    legendaControl.onAdd = function() {
+        const container = L.DomUtil.create('div');
+        const img = L.DomUtil.create('img', '', container);
+        img.src = legendaUrl;
+        img.alt = 'Legenda';
+        img.style.width = '800px';
+        img.style.height = '55px';
+        img.style.padding = '4px';
+        img.style.margin = '8px';
+        img.style.pointerEvents = 'auto';
+        return container;
+    };
+    legendaControl.addTo(mapa);
+
+    // ===== Polígonos de Municípios (AM) coloridos por qualidade do ar =====
+    // Fonte GeoJSON AM (UF 13) com limites municipais
+    const GEOJSON_AM_MUNICIPIOS = 'https://raw.githubusercontent.com/estatisticadefesacivil/mapa_qualidade_do_ar/refs/heads/main/mapa_am_geo.json';
+    let dadosAgregadosPorMunicipio = new Map(); // chave normalizada -> { municipio, faixa, pm25_media, cor }
+
+    function normalizarTexto(str) {
+        return (str || '')
+          .toString()
+          .normalize('NFD')
+          .replace(/\p{Diacritic}+/gu, '')
+          .toLowerCase()
+          .trim();
+    }
+
+    function carregarDadosAgregados() {
+        return fetch('/poligonos_municipios')
+          .then(r => r.json())
+          .then(lista => {
+              dadosAgregadosPorMunicipio.clear();
+              (lista || []).forEach(item => {
+                  const chave = normalizarTexto(item.municipio);
+                  dadosAgregadosPorMunicipio.set(chave, item);
+              });
+          })
+          .catch(() => { dadosAgregadosPorMunicipio.clear(); });
+    }
+
+    function estiloMunicipio(feature) {
+        const nome = feature?.properties?.name || feature?.properties?.NM_MUN || feature?.properties?.NM_MUNICIPIO || '';
+        const chave = normalizarTexto(nome);
+        const info = dadosAgregadosPorMunicipio.get(chave);
+        const cor = info?.cor || '#CCCCCC';
+        return {
+            color: cor,
+            weight: 1,
+            opacity: 0.8,
+            fillColor: cor,
+            fillOpacity: 0.35
+        };
+    }
+
+    function onEachMunicipio(feature, layer) {
+        const nome = feature?.properties?.name || feature?.properties?.NM_MUN || feature?.properties?.NM_MUNICIPIO || 'Município';
+        const chave = normalizarTexto(nome);
+        const info = dadosAgregadosPorMunicipio.get(chave);
+        const faixa = info?.faixa || 'Sem dados';
+        const pm25 = Number.isFinite(info?.pm25_media) ? info.pm25_media.toFixed(1) : '—';
+
+        const html = `
+            <div style="font-family: Segoe UI, sans-serif; max-width: 360px;">
+              <div style="font-weight:600; font-size:16px; margin-bottom:6px; color:#333;">${nome}</div>
+              <div style="display:flex; justify-content:space-between; gap:8px;">
+                <div><span style="color:#666;">PM2,5 (média 24h):</span> <strong>${pm25} µg/m³</strong></div>
+                <div><span style="color:#666;">Qualidade:</span> <strong>${faixa}</strong></div>
+              </div>
+            </div>
+        `;
+        layer.bindPopup(html);
+
+        layer.on({
+            mouseover: (e) => {
+                const l = e.target;
+                l.setStyle({ weight: 2, fillOpacity: 0.45 });
+                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                    l.bringToFront();
+                }
+            },
+            mouseout: (e) => {
+                poligonosLayer.resetStyle(e.target);
+            },
+            click: () => {
+                layer.openPopup();
+            }
+        });
+    }
+
+    function desenharPoligonos() {
+        // Remove camada anterior
+        if (poligonosLayer) {
+            mapa.removeLayer(poligonosLayer);
+            poligonosLayer = null;
+        }
+        // Carrega GeoJSON e plota com estilo baseado em dados agregados
+        fetch(GEOJSON_AM_MUNICIPIOS)
+          .then(r => r.json())
+          .then(geo => {
+              poligonosLayer = L.geoJSON(geo, {
+                  style: estiloMunicipio,
+                  onEachFeature: onEachMunicipio
+              });
+              poligonosLayer.addTo(mapa);
+          })
+          .catch(() => { /* silencioso */ });
+    }
+
+    // Carrega dados agregados e desenha polígonos ao iniciar
+    carregarDadosAgregados().then(desenharPoligonos);
+
+    function getCustomIcon(qualidade) {
+        let iconUrl;
+
+        switch (qualidade?.toLowerCase()) {
+            case 'boa':
+                iconUrl = 'https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Ponto_boa.png?raw=true';
+                break;
+            case 'moderada':
+                iconUrl = 'https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Ponto_moderada.png?raw=true';
+                break;
+            case 'ruim':
+                iconUrl = 'https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Ponto_ruim.png?raw=true';
+                break;
+            case 'muito ruim':
+                iconUrl = 'https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Ponto_muitoruim.png?raw=true';
+                break;
+            case 'péssima':
+                iconUrl = 'https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Ponto_pessima.png?raw=true';
+                break;
+            default:
+                iconUrl = 'https://raw.githubusercontent.com/estatisticadefesacivil/mapa_qualidade_do_ar/main/Default.png';
+        }
+
+        return L.icon({
+            iconUrl,
+            iconSize: [15, 15],
+            iconAnchor: [25, 24],
+            popupAnchor: [-18, -30]
+        });
+    }
+
+    function getFaixaInfo(pm25) {
+        if (pm25 <= 25) {
+            return {
+                faixa: "Boa",
+                color: "#009966",
+                colorClara: "#E1F0EB",
+                iconUrl: "https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Boa.png?raw=true"
+            };
+        } else if (pm25 <= 50) {
+            return {
+                faixa: "Moderada",
+                color: "#DDCA00",
+                colorClara: "#F7F5E1",
+                iconUrl: "https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Moderada.png?raw=true"
+            };
+        } else if (pm25 <= 75) {
+            return {
+                faixa: "Ruim",
+                color: "#F5BA09",
+                colorClara: "#F9F6ED",
+                iconUrl: "https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Ruim.png?raw=true"
+            };
+        } else if (pm25 <= 125) {
+            return {
+                faixa: "Muito Ruim",
+                color: "#EE3608",
+                colorClara: "#F6EEEF",
+                iconUrl: "https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/Muito%20Ruim.png?raw=true"
+            };
+        } else {
+            return {
+                faixa: "Péssima",
+                color: "#660099",
+                colorClara: "#F8F4FA",
+                iconUrl: "https://github.com/estatisticadefesacivil/mapa_qualidade_do_ar/blob/main/P%C3%A9ssima.png?raw=true"
+            };
+        }
+    }
+
+    function atualizarMapa(dados) {
+        marcadores.forEach(m => mapa.removeLayer(m));
+        marcadores = [];
+
+        dados.forEach(ponto => {
+            if (ponto.lat && ponto.lon) {
+                const customIcon = getCustomIcon(ponto.qualidade);
+                const pm25 = parseFloat(ponto.parametro) || 0;
+                const faixaInfo = getFaixaInfo(pm25);
+
+                const popupHTML = `
+                <div style="font-family: Segoe UI, sans-serif; max-width: 480px; overflow: hidden;border-radius: 4px; box-shadow: 0 1px 6px rgba(0,0,0,0.15);">
+                    <div style="background-color:#F5F5F5; color: ${faixaInfo.color}; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <img src="${faixaInfo.iconUrl}" width="35" height="35" style="border-radius: 50%;" />
+                            <span style="font-weight: bold; font-size: 20px;">${faixaInfo.faixa}</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <div style="font-size: 18px; font-weight: bold;">
+                                ${pm25.toFixed(1)} <span style="font-size: 12px;">µg/m³</span>
+                            </div>
+                            <div style="padding: 5px 4px 8px 8px; font-size: 12px; color: #777;">
+                                PM2,5 – Média (24h)
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding: 10px 16px 12px 16px; font-size: 13px; color: #333; line-height: 1.6; background-color: #fefefe;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="width: 130px; color: #555; font-weight: normal;">Município:</strong>
+                            <span style="text-align: right; font-weight: bold; color: #454545;">${ponto.cidade || "Sem município"}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="width: 130px; color: #555; font-weight: normal;">Geolocalização:</strong>
+                            <span style="text-align: right; font-weight: bold; color: #454545;">(${parseFloat(ponto.lat).toFixed(6)}, ${parseFloat(ponto.lon).toFixed(6)})</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="width: 130px; color: #555; font-weight: normal;">Sensor:</strong>
+                            <span style="border: 1px solid #D9D9D9; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                ${ponto.sensor}
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong style="width: 130px; color: #555; font-weight: normal;">Index do Sensor:</strong>
+                            <span style="text-align: right; font-weight: bold; color: #454545;">${ponto.sensor_index || "—"}</span>
+                        </div>
+                    </div>
+                </div>`;
+
+                const marker = L.marker([ponto.lat, ponto.lon], {
+                    icon: customIcon
+                }).bindPopup(popupHTML);
+
+                marker.addTo(mapa);
+                marcadores.push(marker);
+            }
+        });
+    }
+
+    // Ajusta o zoom para o município atualmente selecionado usando os pontos filtrados
+    function ajustarZoomParaMunicipioSelecionado(dados) {
+        const muniSel = (municipioSelect?.value || '').trim();
+        if (!muniSel) return;
+
+        const coords = (dados || [])
+            .filter(p => p && p.lat && p.lon)
+            .map(p => [parseFloat(p.lat), parseFloat(p.lon)])
+            .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+
+        if (coords.length === 0) return;
+        if (coords.length === 1) {
+            mapa.setView(coords[0], 12);
+            return;
+        }
+        const bounds = L.latLngBounds(coords);
+        mapa.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    }
+
+    // Filtragem instantânea no cliente
+    function filtrarDadosLocal(municipio, classificacao) {
+        const muniSel = (municipio || '').toLowerCase();
+        const clsSel = (classificacao || '').toLowerCase();
+        return allData.filter(p => {
+            const muni = (p.cidade || p.municipio || '').toLowerCase();
+            const faixa = getFaixaFromPoint(p).toLowerCase();
+            const okMuni = !muniSel || muni === muniSel;
+            const okCls = !clsSel || faixa === clsSel;
+            return okMuni && okCls;
+        });
+    }
+
+    function buscarDados() {
+        const municipio = document.getElementById('municipio').value;
+        const classificacao = document.getElementById('classificacao').value;
+        // Atualiza imediatamente usando cache local
+        if (Array.isArray(allData) && allData.length > 0) {
+            const filtrados = filtrarDadosLocal(municipio, classificacao);
+            atualizarMapa(filtrados);
+            ajustarZoomParaMunicipioSelecionado(filtrados);
+        } else {
+            // Fallback: primeira carga
+            fetch(`/dados_mapa?municipio=${encodeURIComponent(municipio)}&classificacao=${encodeURIComponent(classificacao)}`)
+                .then(response => response.json())
+                .then(data => { atualizarMapa(data); ajustarZoomParaMunicipioSelecionado(data); });
+        }
+    }
+
+    // ===== Dependência bidirecional entre selects =====
+    const municipioSelect = document.getElementById('municipio');
+    const classificacaoSelect = document.getElementById('classificacao');
+
+    let municipioToClass = new Map(); // municipio -> Set(classificacoes)
+    let classToMunicipio = new Map(); // classificacao -> Set(municipios)
+    let allMunicipiosList = [];
+    let allClassList = ["Boa", "Moderada", "Ruim", "Muito Ruim", "Péssima"]; // fallback
+
+    function getFaixaFromPoint(ponto) {
+        if (ponto && ponto.qualidade) {
+            const q = String(ponto.qualidade).toLowerCase();
+            if (q.includes('boa')) return 'Boa';
+            if (q.includes('moderada')) return 'Moderada';
+            if (q.includes('muito ruim')) return 'Muito Ruim';
+            if (q.includes('ruim')) return 'Ruim';
+            if (q.includes('péssima') || q.includes('pessima')) return 'Péssima';
+        }
+        const pm25 = parseFloat(ponto?.parametro) || 0;
+        return getFaixaInfo(pm25).faixa;
+    }
+
+    function buildMaps(data) {
+        municipioToClass.clear();
+        classToMunicipio.clear();
+        const muniSet = new Set();
+        const classSet = new Set();
+
+        data.forEach(p => {
+            const muni = p.cidade || p.municipio || '';
+            if (!muni) return;
+            const faixa = getFaixaFromPoint(p);
+            muniSet.add(muni);
+            classSet.add(faixa);
+
+            if (!municipioToClass.has(muni)) municipioToClass.set(muni, new Set());
+            municipioToClass.get(muni).add(faixa);
+
+            if (!classToMunicipio.has(faixa)) classToMunicipio.set(faixa, new Set());
+            classToMunicipio.get(faixa).add(muni);
+        });
+
+        allMunicipiosList = Array.from(muniSet).sort((a,b)=>a.localeCompare(b));
+        if (classSet.size > 0) {
+            allClassList = Array.from(classSet);
+            const order = { 'Boa':1, 'Moderada':2, 'Ruim':3, 'Muito Ruim':4, 'Péssima':5 };
+            allClassList.sort((a,b)=>(order[a]||99)-(order[b]||99));
+        }
+    }
+
+    function refillOptions(selectEl, values, placeholderText) {
+        const current = selectEl.value;
+        selectEl.innerHTML = '';
+        const opt0 = document.createElement('option');
+        opt0.value = '';
+        opt0.textContent = placeholderText;
+        selectEl.appendChild(opt0);
+        values.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            selectEl.appendChild(opt);
+        });
+        if (values.includes(current)) selectEl.value = current;
+    }
+
+    function onMunicipioChange() {
+        const muni = municipioSelect.value;
+        if (!muni) {
+            refillOptions(classificacaoSelect, allClassList, 'Selecione a Qualidade');
+            buscarDados();
+            // Mostrar todo o Amazonas quando "todos os municípios" estiver selecionado
+            mapa.setView(initialCenter, initialZoom);
+            return;
+        }
+        const setCls = municipioToClass.get(muni) || new Set();
+        const listCls = Array.from(setCls);
+        const order = { 'Boa':1, 'Moderada':2, 'Ruim':3, 'Muito Ruim':4, 'Péssima':5 };
+        listCls.sort((a,b)=>(order[a]||99)-(order[b]||99));
+        refillOptions(classificacaoSelect, listCls, 'Selecione a Qualidade');
+        if (listCls.length === 1) classificacaoSelect.value = listCls[0]; else classificacaoSelect.value = '';
+        buscarDados();
+        // Após atualizar, ajusta o zoom para o município selecionado
+        const filtrados = filtrarDadosLocal(muni, classificacaoSelect.value || '');
+        ajustarZoomParaMunicipioSelecionado(filtrados);
+    }
+
+    function onClassificacaoChange() {
+        const cls = classificacaoSelect.value;
+        if (!cls) {
+            refillOptions(municipioSelect, allMunicipiosList, 'Selecione o município');
+            buscarDados();
+            // Mostrar todo o Amazonas quando "todas as qualidades" estiver selecionada
+            mapa.setView(initialCenter, initialZoom);
+            return;
+        }
+        const setMunis = classToMunicipio.get(cls) || new Set();
+        const listMunis = Array.from(setMunis).sort((a,b)=>a.localeCompare(b));
+        refillOptions(municipioSelect, listMunis, 'Selecione o município');
+        if (listMunis.length === 1) {
+            municipioSelect.value = listMunis[0];
+        } else if (!listMunis.includes(municipioSelect.value)) {
+            municipioSelect.value = '';
+        }
+        buscarDados();
+        // Se um município ficar selecionado, ajustar zoom para ele
+        const filtrados = filtrarDadosLocal(municipioSelect.value || '', cls);
+        ajustarZoomParaMunicipioSelecionado(filtrados);
+    }
+
+    municipioSelect.addEventListener('change', onMunicipioChange);
+    classificacaoSelect.addEventListener('change', onClassificacaoChange);
+
+    function carregarTudo() {
+        fetch('/dados_mapa?municipio=&classificacao=')
+            .then(r => r.json())
+            .then(data => {
+                allData = Array.isArray(data) ? data : [];
+                buildMaps(allData);
+                refillOptions(municipioSelect, allMunicipiosList, 'Selecione o município');
+                refillOptions(classificacaoSelect, allClassList, 'Selecione a Qualidade');
+                atualizarMapa(allData);
+            })
+            .catch(() => buscarDados());
+    }
+
+    carregarTudo();
+</script>
+
+</body>
+</html>
